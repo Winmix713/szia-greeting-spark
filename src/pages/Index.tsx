@@ -1,9 +1,9 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { EditableCodeBlock } from '@/components/EditableCodeBlock';
 import { NavigationBar } from '@/components/NavigationBar';
 import { ConversionOptions } from '@/components/ConversionOptions';
+import { SVGPreview } from '@/components/SVGPreview';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -164,8 +164,8 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Input */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left Column - Input and Preview */}
             <div className="lg:col-span-2 space-y-6">
               {!svgContent && (
                 <Card>
@@ -180,26 +180,30 @@ const Index = () => {
               )}
 
               {svgContent && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      SVG Input
-                      {fileName && (
-                        <span className="text-sm font-normal text-muted-foreground">
-                          {fileName}
-                        </span>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <EditableCodeBlock
-                      code={svgContent}
-                      onChange={handleSvgChange}
-                      title="SVG Kód"
-                      language="xml"
-                    />
-                  </CardContent>
-                </Card>
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        SVG Input
+                        {fileName && (
+                          <span className="text-sm font-normal text-muted-foreground">
+                            {fileName}
+                          </span>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <EditableCodeBlock
+                        code={svgContent}
+                        onChange={handleSvgChange}
+                        title="SVG Kód"
+                        language="xml"
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <SVGPreview svgContent={svgContent} />
+                </>
               )}
 
               {jsxOutput && (
@@ -241,7 +245,7 @@ const Index = () => {
             </div>
 
             {/* Right Column - Options */}
-            <div className="space-y-6">
+            <div className="lg:col-span-2 space-y-6">
               <ConversionOptions
                 options={conversionOptions}
                 onChange={setConversionOptions}
