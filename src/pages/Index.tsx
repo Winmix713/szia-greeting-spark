@@ -3,13 +3,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { EditableCodeBlock } from '@/components/EditableCodeBlock';
 import { NavigationBar } from '@/components/NavigationBar';
-import { ConversionOptions } from '@/components/ConversionOptions';
-import { AdvancedCleaningOptions } from '@/components/AdvancedCleaningOptions';
 import { ProcessingQueue, QueueItem } from '@/components/ProcessingQueue';
 import { SVGPreview } from '@/components/SVGPreview';
+import { PerformanceMetrics } from '@/components/PerformanceMetrics';
+import { SvgAnalysis } from '@/components/SvgAnalysis';
+import { AdvancedOptionsPanel } from '@/components/AdvancedOptionsPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -297,76 +297,12 @@ const Index = () => {
 
                   {/* Performance Metrics */}
                   {performanceMonitor.metrics && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Teljesítmény metrikák</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {performanceMonitor.metrics.processingTime.toFixed(0)}ms
-                            </div>
-                            <div className="text-xs text-muted-foreground">Feldolgozási idő</div>
-                          </div>
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {performanceMonitor.metrics.memoryUsage.toFixed(1)}MB
-                            </div>
-                            <div className="text-xs text-muted-foreground">Memóriahasználat</div>
-                          </div>
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {performanceMonitor.metrics.optimizationRatio.toFixed(1)}%
-                            </div>
-                            <div className="text-xs text-muted-foreground">Optimalizálás</div>
-                          </div>
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {performanceMonitor.metrics.elementCount}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Elemek</div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <PerformanceMetrics metrics={performanceMonitor.metrics} />
                   )}
 
                   {/* SVG Analysis */}
                   {svgAnalysis && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>SVG Analízis</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {svgAnalysis.elementCount}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Elements</div>
-                          </div>
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {svgAnalysis.pathCount}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Paths</div>
-                          </div>
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {svgAnalysis.groupCount}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Groups</div>
-                          </div>
-                          <div className="text-center p-3 bg-muted rounded-lg">
-                            <div className="text-2xl font-bold text-primary">
-                              {(svgAnalysis.fileSize / 1024).toFixed(1)} KB
-                            </div>
-                            <div className="text-xs text-muted-foreground">File Size</div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <SvgAnalysis analysis={svgAnalysis} />
                   )}
                 </>
               )}
@@ -421,46 +357,18 @@ const Index = () => {
 
             {/* Right Column - Advanced Options */}
             <div className="space-y-6">
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="basic">Alap</TabsTrigger>
-                  <TabsTrigger value="advanced">Speciális</TabsTrigger>
-                  <TabsTrigger value="performance">Teljesítmény</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="basic" className="space-y-6">
-                  <ConversionOptions
-                    options={options}
-                    onChange={setOptions}
-                    fileName={fileName}
-                    onFileNameChange={setFileName}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="advanced" className="space-y-6">
-                  <AdvancedCleaningOptions
-                    options={cleaningOptions}
-                    onChange={setCleaningOptions}
-                    precisionValue={precisionValue}
-                    onPrecisionChange={setPrecisionValue}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="performance" className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Teljesítmény beállítások</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="text-sm text-muted-foreground">
-                        <p>Web Workers: {config.enableWebWorkers ? 'Engedélyezve' : 'Letiltva'}</p>
-                        <p>Max fájlméret: {(config.maxFileSize / 1024 / 1024).toFixed(1)} MB</p>
-                        <p>Jelenlegi memóriahasználat: {performanceMonitor.getMemoryUsage().toFixed(1)} MB</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+              <AdvancedOptionsPanel
+                options={options}
+                onOptionsChange={setOptions}
+                fileName={fileName}
+                onFileNameChange={setFileName}
+                cleaningOptions={cleaningOptions}
+                onCleaningOptionsChange={setCleaningOptions}
+                precisionValue={precisionValue}
+                onPrecisionChange={setPrecisionValue}
+                config={config}
+                performanceMonitor={performanceMonitor}
+              />
 
               <Button
                 onClick={handleConvert}
