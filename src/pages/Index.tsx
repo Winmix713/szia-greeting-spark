@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { EditableCodeBlock } from '@/components/EditableCodeBlock';
@@ -7,24 +8,31 @@ import { SVGPreview } from '@/components/SVGPreview';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Download, RefreshCw } from 'lucide-react';
-import { svgToJsx, validateSvg, ConversionOptions as ConversionOptionsType } from '@/utils/svgToJsx';
+import { Copy, Download, RefreshCw, Settings } from 'lucide-react';
+import { validateSvg, analyzeSvg } from '@/utils/svg-utils';
+import { useConverter } from '@/hooks/use-converter';
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [svgContent, setSvgContent] = useState('');
-  const [jsxOutput, setJsxOutput] = useState('');
-  const [fileName, setFileName] = useState('');
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
 
-  const [conversionOptions, setConversionOptions] = useState<ConversionOptionsType>({
-    removeComments: true,
-    formatCode: true,
-    componentName: 'MyIcon',
-    addTypescript: true,
-  });
+  const {
+    svgInput,
+    setSvgInput,
+    jsxOutput,
+    cssOutput,
+    fileName,
+    setFileName,
+    options,
+    setOptions,
+    convertSvgToJsx,
+    copyToClipboard,
+    downloadFile,
+    downloadCssFile,
+    copied
+  } = useConverter();
 
   // Apply theme
   useEffect(() => {
@@ -47,8 +55,7 @@ const Index = () => {
       return;
     }
 
-    setSvgContent(content);
-    setFileName(name);
+    setSvgInput(content);
     
     // Auto-generate component name from filename
     const baseName = name.replace(/\.svg$/, '');
@@ -57,19 +64,16 @@ const Index = () => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join('');
     
-    setConversionOptions(prev => ({
-      ...prev,
-      componentName: componentName || 'MyIcon'
-    }));
+    setFileName(componentName || 'MyIcon');
 
     toast({
       title: "SVG betöltve",
       description: `${name} sikeresen betöltve`,
     });
-  }, [toast]);
+  }, [toast, setSvgInput, setFileName]);
 
   const handleConvert = useCallback(async () => {
-    if (!svgContent.trim()) {
+    if (!svgInput.trim()) {
       toast({
         title: "Nincs SVG tartalom",
         description: "Kérlek tölts fel egy SVG fájlt vagy illeszd be a kódot",
@@ -84,8 +88,7 @@ const Index = () => {
       // Simulate processing time for better UX
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      const result = svgToJsx(svgContent, conversionOptions);
-      setJsxOutput(result);
+      convertSvgToJsx();
       
       toast({
         title: "Konverzió sikeres",
@@ -100,13 +103,13 @@ const Index = () => {
     } finally {
       setIsConverting(false);
     }
-  }, [svgContent, conversionOptions, toast]);
+  }, [svgInput, convertSvgToJsx, toast]);
 
   const handleCopyToClipboard = useCallback(async () => {
     if (!jsxOutput) return;
 
     try {
-      await navigator.clipboard.writeText(jsxOutput);
+      await copyToClipboard();
       toast({
         title: "Másolva",
         description: "A JSX kód a vágólapra másolva",
@@ -118,33 +121,27 @@ const Index = () => {
         variant: "destructive",
       });
     }
-  }, [jsxOutput, toast]);
+  }, [jsxOutput, copyToClipboard, toast]);
 
   const handleDownload = useCallback(() => {
     if (!jsxOutput) return;
 
-    const blob = new Blob([jsxOutput], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${conversionOptions.componentName}.${conversionOptions.addTypescript ? 'tsx' : 'jsx'}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadFile(options.typescript ? 'tsx' : 'jsx');
 
     toast({
       title: "Letöltés megkezdve",
       description: "A JSX fájl letöltése elkezdődött",
     });
-  }, [jsxOutput, conversionOptions, toast]);
+  }, [jsxOutput, downloadFile, options.typescript, toast]);
 
   const handleSvgChange = useCallback((content: string) => {
-    setSvgContent(content);
-    if (jsxOutput) {
-      setJsxOutput(''); // Clear output when SVG changes
-    }
-  }, [jsxOutput]);
+    setSvgInput(content);
+  }, [setSvgInput]);
+
+  // Get SVG analysis for display
+  const svgAnalysis = React.useMemo(() => {
+    return svgInput ? analyzeSvg(svgInput) : null;
+  }, [svgInput]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -167,7 +164,7 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Left Column - Input and Preview */}
             <div className="lg:col-span-2 space-y-6">
-              {!svgContent && (
+              {!svgInput && (
                 <Card>
                   <CardContent className="pt-6">
                     <FileUpload
@@ -179,7 +176,7 @@ const Index = () => {
                 </Card>
               )}
 
-              {svgContent && (
+              {svgInput && (
                 <>
                   <Card>
                     <CardHeader>
@@ -194,7 +191,7 @@ const Index = () => {
                     </CardHeader>
                     <CardContent>
                       <EditableCodeBlock
-                        code={svgContent}
+                        code={svgInput}
                         onChange={handleSvgChange}
                         title="SVG Kód"
                         language="xml"
@@ -202,7 +199,44 @@ const Index = () => {
                     </CardContent>
                   </Card>
 
-                  <SVGPreview svgContent={svgContent} />
+                  <SVGPreview svgContent={svgInput} />
+
+                  {/* SVG Analysis */}
+                  {svgAnalysis && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>SVG Analízis</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-2xl font-bold text-primary">
+                              {svgAnalysis.elementCount}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Elements</div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-2xl font-bold text-primary">
+                              {svgAnalysis.pathCount}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Paths</div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-2xl font-bold text-primary">
+                              {svgAnalysis.groupCount}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Groups</div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-2xl font-bold text-primary">
+                              {(svgAnalysis.fileSize / 1024).toFixed(1)} KB
+                            </div>
+                            <div className="text-xs text-muted-foreground">File Size</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               )}
 
@@ -218,7 +252,7 @@ const Index = () => {
                           onClick={handleCopyToClipboard}
                         >
                           <Copy className="w-4 h-4 mr-2" />
-                          Másolás
+                          {copied ? "Másolva" : "Másolás"}
                         </Button>
                         <Button
                           variant="outline"
@@ -228,6 +262,16 @@ const Index = () => {
                           <Download className="w-4 h-4 mr-2" />
                           Letöltés
                         </Button>
+                        {cssOutput && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={downloadCssFile}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            CSS
+                          </Button>
+                        )}
                       </div>
                     </CardTitle>
                   </CardHeader>
@@ -247,13 +291,15 @@ const Index = () => {
             {/* Right Column - Options */}
             <div className="lg:col-span-2 space-y-6">
               <ConversionOptions
-                options={conversionOptions}
-                onChange={setConversionOptions}
+                options={options}
+                onChange={setOptions}
+                fileName={fileName}
+                onFileNameChange={setFileName}
               />
 
               <Button
                 onClick={handleConvert}
-                disabled={!svgContent.trim() || isConverting}
+                disabled={!svgInput.trim() || isConverting}
                 className="w-full"
                 size="lg"
               >
@@ -263,11 +309,14 @@ const Index = () => {
                     Konvertálás...
                   </>
                 ) : (
-                  'Konvertálás'
+                  <>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Konvertálás
+                  </>
                 )}
               </Button>
 
-              {!svgContent && (
+              {!svgInput && (
                 <div className="text-center p-6 border border-dashed border-border rounded-lg">
                   <p className="text-muted-foreground text-sm">
                     Tölts fel egy SVG fájlt a konverzió megkezdéséhez
